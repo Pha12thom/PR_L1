@@ -1,0 +1,91 @@
+{
+  "users": [
+    {
+      "id": "admin-seed-1",
+      "name": "System Admin",
+      "email": "admin@resq.ke",
+      "phone": "+254700000000",
+      "role": "admin",
+      "passwordHash": "$2b$10$9.7BJRqBJlYBdWgc5iAZM.pYLUBt3KXy/5hdTyBC27l/OZ1/c94nG",
+      "createdAt": "2026-02-24T13:43:03.988Z"
+    },
+    {
+      "id": "a8fe5890-702c-40de-ba44-3f0ee4ad4f50",
+      "name": "milugo",
+      "email": "geofry@gmail.com",
+      "phone": "0112155880",
+      "role": "user",
+      "passwordHash": "$2b$10$rbtJdjGZ/Gu4I8axYQQ4n.3HFS1d5znXEkS0KJN34DzuO7MAHiJem",
+      "createdAt": "2026-02-24T13:50:28.961Z"
+    }
+  ],
+  "reports": [
+    {
+      "id": "06e023ea-24a1-470a-8966-6862ed62df58",
+      "title": "fire outcome",
+      "description": "fire around luanda",
+      "category": "fire",
+      "severity": "high",
+      "location": {
+        "latitude": -0.006962605111356628,
+        "longitude": 34.600067821077324,
+        "locationText": ""
+      },
+      "status": "submitted",
+      "anonymous": false,
+      "contactPhone": "",
+      "reportedBy": "admin-seed-1",
+      "reporterName": "System Admin",
+      "images": [
+        "/uploads/1771941362974-457290782.png"
+      ],
+      "likes": [
+        "admin-seed-1"
+      ],
+      "comments": [
+        {
+          "id": "3e03103e-80a7-4d2d-9a8f-a5c3d60f0dc9",
+          "text": "how",
+          "userId": "admin-seed-1",
+          "userName": "System Admin",
+          "createdAt": "2026-02-24T13:57:02.092Z"
+        }
+      ],
+      "adminUpdates": [],
+      "createdAt": "2026-02-24T13:56:03.031Z",
+      "updatedAt": "2026-02-24T13:57:02.092Z"
+    }
+  ],
+  "contacts": [
+    {
+      "id": "c1",
+      "name": "Kenya Police Emergency",
+      "phone": "999",
+      "description": "National police emergency line"
+    },
+    {
+      "id": "c2",
+      "name": "Kenya National Ambulance",
+      "phone": "1199",
+      "description": "Ambulance and medical support"
+    },
+    {
+      "id": "c3",
+      "name": "Kenya Red Cross",
+      "phone": "1199",
+      "description": "Disaster response and first aid"
+    },
+    {
+      "id": "c4",
+      "name": "Kenya Fire and Rescue",
+      "phone": "112",
+      "description": "Fire incidents and rescue services"
+    },
+    {
+      "id": "c5",
+      "name": "Gender-Based Violence Hotline",
+      "phone": "1195",
+      "description": "Support for GBV cases"
+    }
+  ]
+}
