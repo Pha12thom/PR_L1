@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../api/client';
 
 const STORAGE_KEY = 'resq-notifications-read-map';
 const UNREAD_COUNT_KEY = 'resq-notifications-unread-count';
+const SOUND_PREF_KEY = 'resq-notifications-sound-enabled';
+const POLL_INTERVAL_MS = 30000;
 
 const setUnreadCount = (count) => {
   localStorage.setItem(UNREAD_COUNT_KEY, String(count));
@@ -28,6 +30,59 @@ const NotificationsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selected, setSelected] = useState(null);
+  const [soundEnabled, setSoundEnabled] = useState(() => localStorage.getItem(SOUND_PREF_KEY) !== 'false');
+  const [notificationPermission, setNotificationPermission] = useState(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  );
+  const hasInitializedUnread = useRef(false);
+  const previousUnreadCount = useRef(0);
+
+  const playAlertSound = () => {
+    if (!soundEnabled) return;
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.36);
+      osc.onended = () => ctx.close();
+    } catch {
+      // Ignore audio errors silently.
+    }
+  };
+
+  const showDesktopNotification = (item, newCount) => {
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    try {
+      const title = newCount > 1 ? `${newCount} new emergency alerts` : 'New emergency alert';
+      const body = item
+        ? `${item.title} · ${item.location}`
+        : 'A new incident was reported near your location.';
+      new Notification(title, { body });
+    } catch {
+      // Ignore browser notification errors silently.
+    }
+  };
+
+  const requestDesktopPermission = async () => {
+    if (!('Notification' in window)) return;
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+  };
 
   const getLocationName = async (lat, lng) => {
     try {
@@ -53,6 +108,14 @@ const NotificationsPage = () => {
 
   const persistReadMap = (next) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  };
+
+  const toggleSoundEnabled = () => {
+    setSoundEnabled((prev) => {
+      const next = !prev;
+      localStorage.setItem(SOUND_PREF_KEY, String(next));
+      return next;
+    });
   };
 
   const fetchNearbyNotifications = async (coords) => {
@@ -92,7 +155,20 @@ const NotificationsPage = () => {
       }));
 
       setNotifications(items);
-      setUnreadCount(items.filter((item) => !item.read).length);
+      const unreadCount = items.filter((item) => !item.read).length;
+      setUnreadCount(unreadCount);
+
+      if (hasInitializedUnread.current) {
+        if (unreadCount > previousUnreadCount.current) {
+          const newCount = unreadCount - previousUnreadCount.current;
+          const newestUnread = items.find((item) => !item.read);
+          playAlertSound();
+          showDesktopNotification(newestUnread, newCount);
+        }
+      } else {
+        hasInitializedUnread.current = true;
+      }
+      previousUnreadCount.current = unreadCount;
       setError('');
     } catch {
       setError('Failed to load nearby alerts.');
@@ -129,6 +205,21 @@ const NotificationsPage = () => {
     detectLocation();
   }, []);
 
+  useEffect(() => {
+    if (!userLocation) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      fetchNearbyNotifications(userLocation);
+    }, POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [userLocation]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    setNotificationPermission(Notification.permission);
+  }, []);
+
   const openNotification = (notification) => {
     setSelected(notification);
     if (!notification.read) {
@@ -147,7 +238,9 @@ const NotificationsPage = () => {
               }
             : item
           );
-          setUnreadCount(next.filter((item) => !item.read).length);
+          const unreadCount = next.filter((item) => !item.read).length;
+          setUnreadCount(unreadCount);
+          previousUnreadCount.current = unreadCount;
           return next;
         }
       );
@@ -161,9 +254,20 @@ const NotificationsPage = () => {
     <div className="container section">
       <div className="row between">
         <h2>🔔 Nearby Notifications (2km)</h2>
-        <button type="button" className="btn btn-outline btn-small" onClick={detectLocation}>
-          Refresh Alerts
-        </button>
+        <div className="row gap">
+          <label className="check" style={{ fontSize: '0.88rem' }}>
+            <input type="checkbox" checked={soundEnabled} onChange={toggleSoundEnabled} />
+            Sound alerts
+          </label>
+          {'Notification' in window && notificationPermission !== 'granted' && (
+            <button type="button" className="btn btn-outline btn-small" onClick={requestDesktopPermission}>
+              Enable desktop alerts
+            </button>
+          )}
+          <button type="button" className="btn btn-outline btn-small" onClick={detectLocation}>
+            Refresh Alerts
+          </button>
+        </div>
       </div>
 
       {userLocation && (

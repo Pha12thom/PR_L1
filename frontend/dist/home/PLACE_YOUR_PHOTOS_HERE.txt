@@ -1,0 +1,12 @@
+Add your homepage photos in this folder using these exact names:
+
+1) ambulance.jpg
+2) police-fire.jpg
+3) security-team.jpg
+
+Supported formats you can use:
+- .jpg (recommended)
+- .jpeg
+- .png
+
+If you use .png or .jpeg, rename the file extension in LandingPage.jsx accordingly.

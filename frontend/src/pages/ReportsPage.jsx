@@ -24,6 +24,7 @@ const ReportsPage = () => {
   const [loading, setLoading] = useState(false);
   const [locationError, setLocationError] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const getLocationName = async (lat, lng) => {
     try {
@@ -165,9 +166,17 @@ const ReportsPage = () => {
             {selectedReport.images && selectedReport.images.length > 0 && (
               <div style={{ marginBottom: '12px' }}>
                 <strong style={{ fontSize: '0.85rem' }}>Images:</strong>
-                <div className="img-grid" style={{ marginTop: '8px' }}>
+                <div className="community-img-grid" style={{ marginTop: '8px' }}>
                   {selectedReport.images.map((img) => (
-                    <img key={img} src={`${ASSET_BASE}${img}`} alt="incident" className="report-img" />
+                    <button
+                      key={img}
+                      type="button"
+                      className="image-thumb-btn"
+                      onClick={() => setPreviewImage(`${ASSET_BASE}${img}`)}
+                      aria-label="Open full image"
+                    >
+                      <img src={`${ASSET_BASE}${img}`} alt="incident" className="community-report-img" />
+                    </button>
                   ))}
                 </div>
               </div>
@@ -228,9 +237,17 @@ const ReportsPage = () => {
                     </p>
                   )}
                   {report.images && report.images.length > 0 && (
-                    <div className="img-grid">
+                    <div className="community-img-grid">
                       {report.images.map((img) => (
-                        <img key={img} src={`${ASSET_BASE}${img}`} alt="incident" className="report-img" />
+                        <button
+                          key={img}
+                          type="button"
+                          className="image-thumb-btn"
+                          onClick={() => setPreviewImage(`${ASSET_BASE}${img}`)}
+                          aria-label="Open full image"
+                        >
+                          <img src={`${ASSET_BASE}${img}`} alt="incident" className="community-report-img" />
+                        </button>
                       ))}
                     </div>
                   )}
@@ -248,6 +265,19 @@ const ReportsPage = () => {
             </div>
           )}
         </section>
+      )}
+
+      {previewImage && (
+        <div className="image-lightbox" onClick={() => setPreviewImage(null)}>
+          <button
+            type="button"
+            className="btn btn-small image-lightbox-close"
+            onClick={() => setPreviewImage(null)}
+          >
+            ✕ Close
+          </button>
+          <img src={previewImage} alt="full incident" className="image-lightbox-img" onClick={(e) => e.stopPropagation()} />
+        </div>
       )}
     </div>
   );

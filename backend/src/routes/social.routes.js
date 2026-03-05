@@ -11,6 +11,15 @@ router.post('/reports/:id/like', authRequired, async (req, res) => {
 
     const result = await store.toggleLike(req.params.id, req.user.id);
     const updated = await store.getReportById(req.params.id);
+    await store.addSiteLog({
+      actorId: req.user.id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: result.liked ? 'report.support_added' : 'report.support_removed',
+      entityType: 'report',
+      entityId: req.params.id,
+      ipAddress: req.ip,
+    });
 
     return res.json({ likesCount: updated.likes.length, liked: result.liked });
   } catch (err) {

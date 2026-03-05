@@ -369,8 +369,99 @@ const store = {
   async revokeUser(userId) {
     const conn = await pool.getConnection();
     try {
+      await conn.beginTransaction();
+
+      await conn.query(
+        "UPDATE reports SET reported_by = NULL, reporter_name = 'Anonymous' WHERE reported_by = ?",
+        [userId]
+      );
+      await conn.query('DELETE FROM comments WHERE user_id = ?', [userId]);
+      await conn.query('DELETE FROM likes WHERE user_id = ?', [userId]);
+      await conn.query('DELETE FROM admin_updates WHERE admin_id = ?', [userId]);
       await conn.query('DELETE FROM users WHERE id = ?', [userId]);
+
+      await conn.commit();
       return { success: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getUserAuthById(id) {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query('SELECT id, name, email, role, password_hash FROM users WHERE id = ?', [id]);
+      return rows[0] || null;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async deleteReport(reportId) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query('DELETE FROM report_images WHERE report_id = ?', [reportId]);
+      await conn.query('DELETE FROM comments WHERE report_id = ?', [reportId]);
+      await conn.query('DELETE FROM likes WHERE report_id = ?', [reportId]);
+      await conn.query('DELETE FROM admin_updates WHERE report_id = ?', [reportId]);
+      await conn.query('DELETE FROM reports WHERE id = ?', [reportId]);
+      await conn.commit();
+      return { success: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async resetAllDataExceptAdmin(adminId) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      await conn.query('DELETE FROM report_images');
+      await conn.query('DELETE FROM comments');
+      await conn.query('DELETE FROM likes');
+      await conn.query('DELETE FROM admin_updates');
+      await conn.query('DELETE FROM reports');
+      await conn.query('DELETE FROM users WHERE id <> ?', [adminId]);
+      await conn.commit();
+      return { success: true };
+    } catch (err) {
+      await conn.rollback();
+      throw err;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async addSiteLog({ actorId = null, actorName = 'System', actorRole = 'system', action, entityType = null, entityId = null, details = null, ipAddress = null }) {
+    const id = uuidv4();
+    const conn = await pool.getConnection();
+    try {
+      await conn.query(
+        'INSERT INTO site_logs (id, actor_id, actor_name, actor_role, action, entity_type, entity_id, details, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, actorId, actorName, actorRole, action, entityType, entityId, details, ipAddress]
+      );
+      return { id };
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getSiteLogs(limit = 200) {
+    const conn = await pool.getConnection();
+    try {
+      const safeLimit = Number.isFinite(Number(limit)) ? Math.min(Math.max(Number(limit), 10), 1000) : 200;
+      const [rows] = await conn.query(
+        'SELECT id, actor_id, actor_name, actor_role, action, entity_type, entity_id, details, ip_address, created_at FROM site_logs ORDER BY created_at DESC LIMIT ?',
+        [safeLimit]
+      );
+      return rows;
     } finally {
       conn.release();
     }

@@ -106,6 +106,21 @@ const initDatabase = async () => {
       KEY idx_report_id (report_id)
     );
 
+    CREATE TABLE IF NOT EXISTS site_logs (
+      id VARCHAR(36) PRIMARY KEY,
+      actor_id VARCHAR(36),
+      actor_name VARCHAR(255),
+      actor_role VARCHAR(20),
+      action VARCHAR(120) NOT NULL,
+      entity_type VARCHAR(80),
+      entity_id VARCHAR(36),
+      details LONGTEXT,
+      ip_address VARCHAR(64),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_created_at (created_at),
+      KEY idx_action (action)
+    );
+
     CREATE TABLE IF NOT EXISTS emergency_contacts (
       id VARCHAR(36) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,

@@ -9,6 +9,7 @@ const SocialPage = () => {
   const [reports, setReports] = useState([]);
   const [comments, setComments] = useState({});
   const [loading, setLoading] = useState(true);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const loadReports = async () => {
     try {
@@ -74,9 +75,17 @@ const SocialPage = () => {
               </p>
 
               {report.images && report.images.length > 0 && (
-                <div className="img-grid">
+                <div className="community-img-grid">
                   {report.images.map((img) => (
-                    <img key={img} src={`${ASSET_BASE}${img}`} alt="incident" className="report-img" />
+                    <button
+                      key={img}
+                      type="button"
+                      className="image-thumb-btn"
+                      onClick={() => setPreviewImage(`${ASSET_BASE}${img}`)}
+                      aria-label="Open full image"
+                    >
+                      <img src={`${ASSET_BASE}${img}`} alt="incident" className="community-report-img" />
+                    </button>
                   ))}
                 </div>
               )}
@@ -134,6 +143,19 @@ const SocialPage = () => {
           ))
         )}
       </div>
+
+      {previewImage && (
+        <div className="image-lightbox" onClick={() => setPreviewImage(null)}>
+          <button
+            type="button"
+            className="btn btn-small image-lightbox-close"
+            onClick={() => setPreviewImage(null)}
+          >
+            ✕ Close
+          </button>
+          <img src={previewImage} alt="full incident" className="image-lightbox-img" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 };

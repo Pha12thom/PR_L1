@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -7,6 +7,8 @@ const UNREAD_COUNT_KEY = 'resq-notifications-unread-count';
 const Header = () => {
   const { user, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const readCount = () => {
@@ -22,37 +24,51 @@ const Header = () => {
     };
   }, []);
 
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
+
+  const navClass = ({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`;
+
   return (
-    <header className="header">
-      <div className="container nav-wrap">
-        <Link to="/" className="brand">
-          🚑 ResQ Kenya
-        </Link>
-        <nav className="nav-links">
-          <Link to="/reports">📍 Nearby Incidents</Link>
-          <Link to="/notifications" className="nav-notify-link">
-            🔔 Notifications
-            {unreadCount > 0 && <span className="nav-notify-badge">{unreadCount}</span>}
+    <>
+      <button type="button" className="sidebar-mobile-toggle" onClick={() => setMenuOpen((prev) => !prev)}>
+        ☰ Menu
+      </button>
+
+      <header className={`sidebar ${menuOpen ? 'open' : ''}`}>
+        <div className="sidebar-top">
+          <Link to="/" className="brand sidebar-brand">
+            ResQ Kenya
           </Link>
-          <Link to="/social">💬 Community</Link>
-          <Link to="/contacts">📞 Emergency Contacts</Link>
+          <p className="sidebar-subtitle">Digital Emergency Hub</p>
+        </div>
+
+        <nav className="sidebar-nav">
+          <NavLink to="/reports" className={navClass}>Nearby Incidents</NavLink>
+          <NavLink to="/notifications" className={navClass}>
+            <span className="nav-notify-link">Notifications {unreadCount > 0 && <span className="nav-notify-badge">{unreadCount}</span>}</span>
+          </NavLink>
+          <NavLink to="/social" className={navClass}>Community</NavLink>
+          <NavLink to="/contacts" className={navClass}>Emergency Contacts</NavLink>
           {user ? (
             <>
-              <Link to="/dashboard">📋 Report</Link>
-              {user.role === 'admin' && <Link to="/admin">⚙️ Admin</Link>}
-              <button type="button" onClick={logout} className="btn-link">
+              <NavLink to="/dashboard" className={navClass}>Report</NavLink>
+              {user.role === 'admin' && <NavLink to="/admin" className={navClass}>⚙️ Admin</NavLink>}
+              {user.role === 'admin' && <NavLink to="/admin/logs" className={navClass}>📜 Site Logs</NavLink>}
+              <button type="button" onClick={logout} className="btn-link sidebar-logout">
                 Logout
               </button>
             </>
           ) : (
             <>
-              <Link to="/login">Login</Link>
-              <Link to="/register">Sign Up</Link>
+              <NavLink to="/login" className={navClass}>Login</NavLink>
+              <NavLink to="/register" className={navClass}>Sign Up</NavLink>
             </>
           )}
         </nav>
-      </div>
-    </header>
+      </header>
+    </>
   );
 };
 

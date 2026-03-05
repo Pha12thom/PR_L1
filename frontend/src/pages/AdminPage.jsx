@@ -20,6 +20,9 @@ const AdminPage = () => {
   const [userSearch, setUserSearch] = useState('');
   const [mapReport, setMapReport] = useState(null);
   const [adminLocation, setAdminLocation] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resettingAll, setResettingAll] = useState(false);
 
   const load = async () => {
     try {
@@ -135,6 +138,39 @@ const AdminPage = () => {
     }
   };
 
+  const deleteReport = async (reportId) => {
+    if (!window.confirm('Delete this report permanently? This action cannot be undone.')) return;
+    try {
+      await api.delete(`/admin/reports/${reportId}`);
+      setMessage('✓ Report deleted');
+      setTimeout(() => setMessage(''), 3000);
+      await load();
+    } catch (err) {
+      setMessage(`Error: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  const resetAllData = async () => {
+    if (!resetPassword.trim()) {
+      setMessage('Enter your admin password to reset all data');
+      return;
+    }
+    if (!window.confirm('This will delete all reports, comments, likes, updates and all users except your admin account. Continue?')) return;
+
+    setResettingAll(true);
+    try {
+      await api.post('/admin/reset-all', { password: resetPassword });
+      setMessage('✓ Full reset completed');
+      setResetPassword('');
+      setTimeout(() => setMessage(''), 3500);
+      await load();
+    } catch (err) {
+      setMessage(`Error: ${err.response?.data?.message || err.message}`);
+    } finally {
+      setResettingAll(false);
+    }
+  };
+
   if (loading) return <div className="container section">Loading...</div>;
 
   return (
@@ -163,6 +199,30 @@ const AdminPage = () => {
 
       {activeTab === 'reports' && (
         <>
+          <div className="card" style={{ borderLeftColor: 'var(--kenya-red)', marginBottom: '14px' }}>
+            <h4 style={{ marginTop: 0 }}>Danger Zone</h4>
+            <p style={{ fontSize: '0.9rem', marginBottom: '10px' }}>
+              Reset all system data and keep only your current admin account.
+            </p>
+            <div className="row gap">
+              <input
+                type="password"
+                placeholder="Re-enter admin password"
+                value={resetPassword}
+                onChange={(e) => setResetPassword(e.target.value)}
+                style={{ maxWidth: '320px' }}
+              />
+              <button
+                className="btn btn-small"
+                style={{ backgroundColor: 'var(--kenya-red)' }}
+                onClick={resetAllData}
+                disabled={resettingAll}
+              >
+                {resettingAll ? 'Resetting...' : 'Reset All Data'}
+              </button>
+            </div>
+          </div>
+
           <div className="admin-toolbar card">
             <div className="admin-toolbar-row">
               <p>
@@ -243,10 +303,28 @@ const AdminPage = () => {
                       {report.images && report.images.length > 0 && (
                         <div className="img-grid">
                           {report.images.map((img) => (
-                            <img key={img} src={`${ASSET_BASE}${img}`} alt="incident upload" className="report-img" />
+                            <button
+                              key={img}
+                              type="button"
+                              className="image-thumb-btn"
+                              onClick={() => setPreviewImage(`${ASSET_BASE}${img}`)}
+                              aria-label="Open full image"
+                            >
+                              <img src={`${ASSET_BASE}${img}`} alt="incident upload" className="report-img" />
+                            </button>
                           ))}
                         </div>
                       )}
+
+                      <div style={{ marginBottom: '12px' }}>
+                        <button
+                          className="btn btn-small"
+                          style={{ backgroundColor: 'var(--kenya-red)' }}
+                          onClick={() => deleteReport(report.id)}
+                        >
+                          🗑️ Delete Report
+                        </button>
+                      </div>
 
                       <div className="form">
                         <label style={{ marginBottom: '8px' }}>
@@ -381,6 +459,19 @@ const AdminPage = () => {
             )}
           </div>
         </>
+      )}
+
+      {previewImage && (
+        <div className="image-lightbox" onClick={() => setPreviewImage(null)}>
+          <button
+            type="button"
+            className="btn btn-small image-lightbox-close"
+            onClick={() => setPreviewImage(null)}
+          >
+            ✕ Close
+          </button>
+          <img src={previewImage} alt="full incident" className="image-lightbox-img" onClick={(e) => e.stopPropagation()} />
+        </div>
       )}
 
       {mapReport && (

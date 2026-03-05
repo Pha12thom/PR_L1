@@ -35,6 +35,15 @@ router.post(
     });
 
     const token = signToken(user);
+    await store.addSiteLog({
+      actorId: user.id,
+      actorName: user.name,
+      actorRole: user.role,
+      action: 'auth.register_success',
+      entityType: 'user',
+      entityId: user.id,
+      ipAddress: req.ip,
+    });
     return res.status(201).json({
       token,
       user: { id: user.id, name: user.name, email: user.email, role: user.role },
@@ -52,6 +61,15 @@ router.post('/login', async (req, res) => {
   if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
 
   const token = signToken(user);
+  await store.addSiteLog({
+    actorId: user.id,
+    actorName: user.name,
+    actorRole: user.role,
+    action: 'auth.login_success',
+    entityType: 'user',
+    entityId: user.id,
+    ipAddress: req.ip,
+  });
   return res.json({
     token,
     user: { id: user.id, name: user.name, email: user.email, role: user.role },

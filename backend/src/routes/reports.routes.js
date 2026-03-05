@@ -95,6 +95,17 @@ router.post('/', allowAnonymousAuth, upload.array('images', 5), async (req, res)
 
     const images = (req.files || []).map((file) => `/uploads/${file.filename}`);
 
+    await store.addSiteLog({
+      actorId: req.user?.id || null,
+      actorName: req.user?.name || 'Anonymous',
+      actorRole: req.user?.role || 'guest',
+      action: 'report.created',
+      entityType: 'report',
+      entityId: report.id,
+      details: `severity=${report.severity}`,
+      ipAddress: req.ip,
+    });
+
     return res.status(201).json({ report: { ...report, images } });
   } catch (err) {
     return res.status(500).json({ message: err.message });
@@ -111,6 +122,15 @@ router.post('/:id/comments', authRequired, async (req, res) => {
 
     const comment = await store.addComment(req.params.id, req.user.id, req.user.name, text);
     const updated = await store.getReportById(req.params.id);
+    await store.addSiteLog({
+      actorId: req.user.id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'report.comment_added',
+      entityType: 'report',
+      entityId: req.params.id,
+      ipAddress: req.ip,
+    });
 
     return res.status(201).json({ comment, report: updated });
   } catch (err) {
