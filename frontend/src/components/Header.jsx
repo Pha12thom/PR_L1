@@ -54,6 +54,7 @@ const Header = () => {
           {user ? (
             <>
               <NavLink to="/dashboard" className={navClass}>Report</NavLink>
+              <NavLink to="/messages" className={navClass}>💬 Messages</NavLink>
               {user.role === 'admin' && <NavLink to="/admin" className={navClass}>⚙️ Admin</NavLink>}
               {user.role === 'admin' && <NavLink to="/admin/logs" className={navClass}>📜 Site Logs</NavLink>}
               <button type="button" onClick={logout} className="btn-link sidebar-logout">

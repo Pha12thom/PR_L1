@@ -12,6 +12,8 @@ import AdminPage from './pages/AdminPage';
 import ContactsPage from './pages/ContactsPage';
 import NotificationsPage from './pages/NotificationsPage';
 import AdminLogsPage from './pages/AdminLogsPage';
+import MessagesPage from './pages/MessagesPage';
+import InvitePage from './pages/InvitePage';
 
 function App() {
   return (
@@ -27,11 +29,20 @@ function App() {
             <Route path="/social" element={<SocialPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/contacts" element={<ContactsPage />} />
+            <Route path="/invite/:token" element={<InvitePage />} />
             <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <MessagesPage />
                 </ProtectedRoute>
               }
             />

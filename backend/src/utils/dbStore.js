@@ -29,7 +29,15 @@ const store = {
   async getUserById(id) {
     const conn = await pool.getConnection();
     try {
-      const [rows] = await conn.query('SELECT id, name, email, role, phone FROM users WHERE id = ?', [id]);
+      const [rows] = await conn.query(
+        `SELECT u.id, u.name, u.email, u.role, u.phone, o.id AS organization_id, o.name AS organization_name
+         FROM users u
+         LEFT JOIN organization_memberships om ON om.user_id = u.id
+         LEFT JOIN organizations o ON o.id = om.organization_id
+         WHERE u.id = ?
+         LIMIT 1`,
+        [id]
+      );
       return rows[0] || null;
     } finally {
       conn.release();
@@ -423,6 +431,11 @@ const store = {
     const conn = await pool.getConnection();
     try {
       await conn.beginTransaction();
+      await conn.query('DELETE FROM private_messages');
+      await conn.query('DELETE FROM report_dispatches');
+      await conn.query('DELETE FROM authority_invites');
+      await conn.query('DELETE FROM organization_memberships');
+      await conn.query('DELETE FROM organizations');
       await conn.query('DELETE FROM report_images');
       await conn.query('DELETE FROM comments');
       await conn.query('DELETE FROM likes');
@@ -462,6 +475,225 @@ const store = {
         [safeLimit]
       );
       return rows;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getOrganizations() {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query('SELECT id, name, contact_email, created_by, created_at FROM organizations ORDER BY created_at DESC');
+      return rows;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async createOrganization({ name, contactEmail, createdBy }) {
+    const id = uuidv4();
+    const conn = await pool.getConnection();
+    try {
+      await conn.query('INSERT INTO organizations (id, name, contact_email, created_by) VALUES (?, ?, ?, ?)', [
+        id,
+        name,
+        contactEmail || null,
+        createdBy,
+      ]);
+      return { id, name, contactEmail, createdBy };
+    } finally {
+      conn.release();
+    }
+  },
+
+  async addOrganizationMembership({ organizationId, userId, role = 'desk' }) {
+    const id = uuidv4();
+    const conn = await pool.getConnection();
+    try {
+      await conn.query(
+        'INSERT INTO organization_memberships (id, organization_id, user_id, role) VALUES (?, ?, ?, ?)',
+        [id, organizationId, userId, role]
+      );
+      return { id, organizationId, userId, role };
+    } finally {
+      conn.release();
+    }
+  },
+
+  async createAuthorityInvite({ organizationId, userId, token, tempPassword, expiresAt, createdBy }) {
+    const id = uuidv4();
+    const conn = await pool.getConnection();
+    try {
+      await conn.query(
+        'INSERT INTO authority_invites (id, organization_id, user_id, token, temp_password, expires_at, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [id, organizationId, userId, token, tempPassword, expiresAt, createdBy]
+      );
+      return { id, token };
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getAuthorityInviteByToken(token) {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query(
+        `SELECT ai.id, ai.token, ai.temp_password, ai.expires_at,
+                o.id AS organization_id, o.name AS organization_name,
+                u.id AS user_id, u.name AS user_name, u.email AS user_email
+         FROM authority_invites ai
+         JOIN organizations o ON o.id = ai.organization_id
+         JOIN users u ON u.id = ai.user_id
+         WHERE ai.token = ?
+         LIMIT 1`,
+        [token]
+      );
+      return rows[0] || null;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getOrganizationForUser(userId) {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query(
+        `SELECT o.id, o.name, o.contact_email
+         FROM organization_memberships om
+         JOIN organizations o ON o.id = om.organization_id
+         WHERE om.user_id = ?
+         LIMIT 1`,
+        [userId]
+      );
+      return rows[0] || null;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async createDispatch({ reportId, organizationId, assignedBy, note = '' }) {
+    const id = uuidv4();
+    const conn = await pool.getConnection();
+    try {
+      await conn.query(
+        'INSERT INTO report_dispatches (id, report_id, organization_id, assigned_by, note, status) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, reportId, organizationId, assignedBy, note, 'pending']
+      );
+      return { id, reportId, organizationId };
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getDispatchById(dispatchId) {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query(
+        `SELECT d.*, r.title AS report_title, r.description AS report_description, r.severity, r.category,
+                o.name AS organization_name, u.name AS assigned_by_name
+         FROM report_dispatches d
+         JOIN reports r ON r.id = d.report_id
+         JOIN organizations o ON o.id = d.organization_id
+         JOIN users u ON u.id = d.assigned_by
+         WHERE d.id = ?
+         LIMIT 1`,
+        [dispatchId]
+      );
+      return rows[0] || null;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getDispatchesForAdmin(limit = 300) {
+    const conn = await pool.getConnection();
+    try {
+      const safeLimit = Number.isFinite(Number(limit)) ? Math.min(Math.max(Number(limit), 10), 1000) : 300;
+      const [rows] = await conn.query(
+        `SELECT d.id, d.report_id, d.organization_id, d.assigned_by, d.note, d.status, d.created_at, d.updated_at,
+                r.title AS report_title, r.severity, r.category, r.status AS report_status,
+                o.name AS organization_name,
+                u.name AS assigned_by_name
+         FROM report_dispatches d
+         JOIN reports r ON r.id = d.report_id
+         JOIN organizations o ON o.id = d.organization_id
+         JOIN users u ON u.id = d.assigned_by
+         ORDER BY d.created_at DESC
+         LIMIT ?`,
+        [safeLimit]
+      );
+      return rows;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getDispatchesForUser(userId, limit = 300) {
+    const conn = await pool.getConnection();
+    try {
+      const safeLimit = Number.isFinite(Number(limit)) ? Math.min(Math.max(Number(limit), 10), 1000) : 300;
+      const [rows] = await conn.query(
+        `SELECT d.id, d.report_id, d.organization_id, d.assigned_by, d.note, d.status, d.created_at, d.updated_at,
+                r.title AS report_title, r.severity, r.category, r.status AS report_status,
+                o.name AS organization_name,
+                u.name AS assigned_by_name
+         FROM report_dispatches d
+         JOIN reports r ON r.id = d.report_id
+         JOIN organizations o ON o.id = d.organization_id
+         JOIN users u ON u.id = d.assigned_by
+         JOIN organization_memberships om ON om.organization_id = d.organization_id
+         WHERE om.user_id = ?
+         ORDER BY d.created_at DESC
+         LIMIT ?`,
+        [userId, safeLimit]
+      );
+      return rows;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async addPrivateMessage({ dispatchId, reportId, senderId, receiverUserId = null, receiverOrgId = null, body }) {
+    const id = uuidv4();
+    const conn = await pool.getConnection();
+    try {
+      await conn.query(
+        'INSERT INTO private_messages (id, dispatch_id, report_id, sender_id, receiver_user_id, receiver_org_id, body) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [id, dispatchId, reportId, senderId, receiverUserId, receiverOrgId, body]
+      );
+      return { id };
+    } finally {
+      conn.release();
+    }
+  },
+
+  async getPrivateMessagesByDispatch(dispatchId) {
+    const conn = await pool.getConnection();
+    try {
+      const [rows] = await conn.query(
+        `SELECT pm.id, pm.dispatch_id, pm.report_id, pm.sender_id, pm.receiver_user_id, pm.receiver_org_id, pm.body, pm.created_at,
+                su.name AS sender_name, su.role AS sender_role,
+                ru.name AS receiver_user_name,
+                ro.name AS receiver_org_name
+         FROM private_messages pm
+         JOIN users su ON su.id = pm.sender_id
+         LEFT JOIN users ru ON ru.id = pm.receiver_user_id
+         LEFT JOIN organizations ro ON ro.id = pm.receiver_org_id
+         WHERE pm.dispatch_id = ?
+         ORDER BY pm.created_at ASC`,
+        [dispatchId]
+      );
+      return rows;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async updateDispatchStatus(dispatchId, status) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.query('UPDATE report_dispatches SET status = ? WHERE id = ?', [status, dispatchId]);
+      return { success: true };
     } finally {
       conn.release();
     }

@@ -16,6 +16,7 @@ const reportsRoutes = require('./routes/reports.routes');
 const adminRoutes = require('./routes/admin.routes');
 const socialRoutes = require('./routes/social.routes');
 const contactsRoutes = require('./routes/contacts.routes');
+const messagesRoutes = require('./routes/messages.routes');
 
 const app = express();
 
@@ -47,6 +48,7 @@ const init = async () => {
     app.use('/api/admin', adminRoutes);
     app.use('/api/social', socialRoutes);
     app.use('/api/contacts', contactsRoutes);
+    app.use('/api/messages', messagesRoutes);
 
     app.use((err, _req, res, _next) => {
       if (err) {

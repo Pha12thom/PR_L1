@@ -9,7 +9,9 @@ const ASSET_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api')
 const AdminPage = () => {
   const [reports, setReports] = useState([]);
   const [users, setUsers] = useState([]);
+  const [organizations, setOrganizations] = useState([]);
   const [updates, setUpdates] = useState({});
+  const [dispatchForm, setDispatchForm] = useState({});
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [search, setSearch] = useState('');
@@ -23,15 +25,19 @@ const AdminPage = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [resetPassword, setResetPassword] = useState('');
   const [resettingAll, setResettingAll] = useState(false);
+  const [orgForm, setOrgForm] = useState({ name: '', contactEmail: '' });
+  const [newInvite, setNewInvite] = useState(null);
 
   const load = async () => {
     try {
-      const [reportsRes, usersRes] = await Promise.all([
+      const [reportsRes, usersRes, organizationsRes] = await Promise.all([
         api.get('/admin/reports'),
         api.get('/admin/users'),
+        api.get('/admin/organizations'),
       ]);
       setReports(reportsRes.data.reports || []);
       setUsers(usersRes.data.users || []);
+      setOrganizations(organizationsRes.data.organizations || []);
     } catch (err) {
       setMessage(`Error loading data: ${err.message}`);
     } finally {
@@ -171,6 +177,46 @@ const AdminPage = () => {
     }
   };
 
+  const createOrganizationAccount = async () => {
+    if (!orgForm.name.trim() || !orgForm.contactEmail.trim()) {
+      setMessage('Organization name and contact email are required');
+      return;
+    }
+    try {
+      const res = await api.post('/admin/organizations', {
+        name: orgForm.name.trim(),
+        contactEmail: orgForm.contactEmail.trim(),
+      });
+      setNewInvite(res.data);
+      setOrgForm({ name: '', contactEmail: '' });
+      setMessage('✓ Organization account created');
+      setTimeout(() => setMessage(''), 3000);
+      await load();
+    } catch (err) {
+      setMessage(`Error: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
+  const dispatchCase = async (reportId) => {
+    const payload = dispatchForm[reportId] || {};
+    if (!payload.organizationId) {
+      setMessage('Select an authority organization to dispatch this case');
+      return;
+    }
+
+    try {
+      await api.post(`/admin/reports/${reportId}/dispatch`, {
+        organizationId: payload.organizationId,
+        note: payload.note || '',
+      });
+      setMessage('✓ Case dispatched successfully');
+      setTimeout(() => setMessage(''), 3000);
+      setDispatchForm((prev) => ({ ...prev, [reportId]: { organizationId: '', note: '' } }));
+    } catch (err) {
+      setMessage(`Error: ${err.response?.data?.message || err.message}`);
+    }
+  };
+
   if (loading) return <div className="container section">Loading...</div>;
 
   return (
@@ -194,6 +240,12 @@ const AdminPage = () => {
           onClick={() => setActiveTab('users')}
         >
           👥 Users
+        </button>
+        <button
+          className={`btn ${activeTab === 'authorities' ? '' : 'btn-outline'}`}
+          onClick={() => setActiveTab('authorities')}
+        >
+          🚨 Authorities
         </button>
       </div>
 
@@ -324,6 +376,48 @@ const AdminPage = () => {
                         >
                           🗑️ Delete Report
                         </button>
+                      </div>
+
+                      <div className="card" style={{ borderLeftColor: 'var(--purple-1)', marginBottom: '12px' }}>
+                        <h4 style={{ marginTop: 0 }}>Dispatch to Authority</h4>
+                        <div className="form">
+                          <select
+                            value={dispatchForm[report.id]?.organizationId || ''}
+                            onChange={(e) =>
+                              setDispatchForm((prev) => ({
+                                ...prev,
+                                [report.id]: {
+                                  ...prev[report.id],
+                                  organizationId: e.target.value,
+                                },
+                              }))
+                            }
+                          >
+                            <option value="">-- Select authority --</option>
+                            <option value="all">All authorities (general alert)</option>
+                            {organizations.map((org) => (
+                              <option key={org.id} value={org.id}>{org.name}</option>
+                            ))}
+                          </select>
+
+                          <textarea
+                            placeholder="Reminder/brief to authority (e.g., immediate response needed at this location)"
+                            value={dispatchForm[report.id]?.note || ''}
+                            onChange={(e) =>
+                              setDispatchForm((prev) => ({
+                                ...prev,
+                                [report.id]: {
+                                  ...prev[report.id],
+                                  note: e.target.value,
+                                },
+                              }))
+                            }
+                          />
+
+                          <button className="btn btn-small" onClick={() => dispatchCase(report.id)}>
+                            Send Reminder / Dispatch Case
+                          </button>
+                        </div>
                       </div>
 
                       <div className="form">
@@ -458,6 +552,56 @@ const AdminPage = () => {
               ))
             )}
           </div>
+        </>
+      )}
+
+      {activeTab === 'authorities' && (
+        <>
+          <section className="card" style={{ marginBottom: '14px' }}>
+            <h3 style={{ marginTop: 0 }}>Create Authority Account</h3>
+            <p style={{ fontSize: '0.9rem' }}>
+              Create login credentials for organizations like Kenya Police or hospitals, then share the generated invite link.
+            </p>
+            <div className="form" style={{ maxWidth: '560px' }}>
+              <input
+                placeholder="Organization name (e.g. Kenya Police)"
+                value={orgForm.name}
+                onChange={(e) => setOrgForm((prev) => ({ ...prev, name: e.target.value }))}
+              />
+              <input
+                placeholder="Organization email"
+                type="email"
+                value={orgForm.contactEmail}
+                onChange={(e) => setOrgForm((prev) => ({ ...prev, contactEmail: e.target.value }))}
+              />
+              <button className="btn" onClick={createOrganizationAccount}>Create Account + Invite Link</button>
+            </div>
+
+            {newInvite && (
+              <div className="success" style={{ marginTop: '10px' }}>
+                <p><strong>Organization:</strong> {newInvite.organization?.name}</p>
+                <p><strong>Login Email:</strong> {newInvite.account?.email}</p>
+                <p><strong>Temporary Password:</strong> {newInvite.account?.password}</p>
+                <p><strong>Share Link:</strong> <a href={newInvite.inviteLink} target="_blank" rel="noreferrer">{newInvite.inviteLink}</a></p>
+              </div>
+            )}
+          </section>
+
+          <section className="card">
+            <h3 style={{ marginTop: 0 }}>Registered Authorities ({organizations.length})</h3>
+            {organizations.length === 0 ? (
+              <p>No authority organizations yet.</p>
+            ) : (
+              <div style={{ display: 'grid', gap: '10px' }}>
+                {organizations.map((org) => (
+                  <div key={org.id} className="incident-row">
+                    <strong>{org.name}</strong>
+                    <p style={{ margin: '4px 0 0' }}>{org.contact_email || 'No contact email'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </>
       )}
 

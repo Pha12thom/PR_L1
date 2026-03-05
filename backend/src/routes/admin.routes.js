@@ -1,5 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const { frontendUrl } = require('../config/env');
 const { roleRequired, authRequired } = require('../middleware/auth');
 const store = require('../utils/dbStore');
 
@@ -96,6 +98,153 @@ router.get('/users', async (_req, res) => {
   try {
     const users = await store.getAllUsers();
     return res.json({ users });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.get('/organizations', async (_req, res) => {
+  try {
+    const organizations = await store.getOrganizations();
+    return res.json({ organizations });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/organizations', async (req, res) => {
+  try {
+    const { name, contactEmail } = req.body;
+    if (!name || !contactEmail) {
+      return res.status(400).json({ message: 'Organization name and contact email are required' });
+    }
+
+    const existing = await store.getUserByEmail(contactEmail.toLowerCase());
+    if (existing) {
+      return res.status(409).json({ message: 'That contact email is already used by another account' });
+    }
+
+    const tempPassword = crypto.randomBytes(5).toString('hex');
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const organization = await store.createOrganization({
+      name: name.trim(),
+      contactEmail: contactEmail.toLowerCase(),
+      createdBy: req.user.id,
+    });
+
+    const createdUser = await store.createUser({
+      name: `${name.trim()} Desk`,
+      email: contactEmail.toLowerCase(),
+      phone: '',
+      role: 'user',
+      passwordHash,
+    });
+
+    await store.addOrganizationMembership({
+      organizationId: organization.id,
+      userId: createdUser.id,
+      role: 'desk',
+    });
+
+    const inviteToken = crypto.randomBytes(20).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await store.createAuthorityInvite({
+      organizationId: organization.id,
+      userId: createdUser.id,
+      token: inviteToken,
+      tempPassword,
+      expiresAt,
+      createdBy: req.user.id,
+    });
+
+    await store.addSiteLog({
+      actorId: req.user.id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'admin.organization_created',
+      entityType: 'organization',
+      entityId: organization.id,
+      details: organization.name,
+      ipAddress: req.ip,
+    });
+
+    const origin = String(frontendUrl || '').replace(/\/$/, '');
+    return res.status(201).json({
+      organization,
+      account: {
+        email: createdUser.email,
+        password: tempPassword,
+      },
+      inviteLink: `${origin}/invite/${inviteToken}`,
+      expiresAt,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.post('/reports/:id/dispatch', async (req, res) => {
+  try {
+    const report = await store.getReportById(req.params.id);
+    if (!report) return res.status(404).json({ message: 'Report not found' });
+
+    const { organizationId, note } = req.body;
+    if (!organizationId) {
+      return res.status(400).json({ message: 'organizationId is required' });
+    }
+
+    let targets = [];
+    if (organizationId === 'all') {
+      targets = await store.getOrganizations();
+      if (!targets.length) return res.status(400).json({ message: 'No organizations available to dispatch' });
+    } else {
+      const organizations = await store.getOrganizations();
+      const match = organizations.find((item) => item.id === organizationId);
+      if (!match) return res.status(404).json({ message: 'Organization not found' });
+      targets = [match];
+    }
+
+    const dispatches = [];
+    for (const org of targets) {
+      const dispatch = await store.createDispatch({
+        reportId: req.params.id,
+        organizationId: org.id,
+        assignedBy: req.user.id,
+        note: note || '',
+      });
+
+      await store.addPrivateMessage({
+        dispatchId: dispatch.id,
+        reportId: req.params.id,
+        senderId: req.user.id,
+        receiverOrgId: org.id,
+        body: note || `New case dispatched: ${report.title}`,
+      });
+
+      dispatches.push(dispatch);
+    }
+
+    await store.addSiteLog({
+      actorId: req.user.id,
+      actorName: req.user.name,
+      actorRole: req.user.role,
+      action: 'admin.report_dispatched',
+      entityType: 'report',
+      entityId: req.params.id,
+      details: organizationId === 'all' ? 'all organizations' : organizationId,
+      ipAddress: req.ip,
+    });
+
+    return res.status(201).json({ message: 'Case dispatched successfully', dispatches });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+});
+
+router.get('/dispatches', async (_req, res) => {
+  try {
+    const dispatches = await store.getDispatchesForAdmin(300);
+    return res.json({ dispatches });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }

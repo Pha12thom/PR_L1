@@ -226,6 +226,78 @@ body {
   color: #324267;
 }
 
+.messages-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.messages-list-card,
+.messages-chat-card {
+  min-height: 520px;
+}
+
+.messages-dispatch-list {
+  display: grid;
+  gap: 8px;
+}
+
+.messages-dispatch-item {
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+}
+
+.messages-dispatch-item.active {
+  border-left: 4px solid var(--purple-1);
+  background: #fbf9ff;
+}
+
+.messages-dispatch-item small {
+  color: #5e6882;
+}
+
+.messages-thread {
+  margin-top: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.message-bubble {
+  padding: 10px 12px;
+  border-radius: 12px;
+  max-width: 82%;
+  display: grid;
+  gap: 4px;
+}
+
+.message-bubble p,
+.message-bubble small,
+.message-bubble strong {
+  margin: 0;
+}
+
+.message-bubble.mine {
+  justify-self: end;
+  background: #efe8ff;
+  border: 1px solid #d9c9ff;
+}
+
+.message-bubble.theirs {
+  justify-self: start;
+  background: #edf5ff;
+  border: 1px solid #d4e4ff;
+}
+
 .footer-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -1214,6 +1286,10 @@ p {
   }
 
   .notifications-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .messages-layout {
     grid-template-columns: 1fr;
   }
 

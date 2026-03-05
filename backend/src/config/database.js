@@ -121,6 +121,75 @@ const initDatabase = async () => {
       KEY idx_action (action)
     );
 
+    CREATE TABLE IF NOT EXISTS organizations (
+      id VARCHAR(36) PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      contact_email VARCHAR(255),
+      created_by VARCHAR(36),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_org_name (name)
+    );
+
+    CREATE TABLE IF NOT EXISTS organization_memberships (
+      id VARCHAR(36) PRIMARY KEY,
+      organization_id VARCHAR(36) NOT NULL,
+      user_id VARCHAR(36) NOT NULL,
+      role VARCHAR(40) DEFAULT 'member',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY unique_org_user (organization_id, user_id),
+      FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS authority_invites (
+      id VARCHAR(36) PRIMARY KEY,
+      organization_id VARCHAR(36) NOT NULL,
+      user_id VARCHAR(36) NOT NULL,
+      token VARCHAR(120) UNIQUE NOT NULL,
+      temp_password VARCHAR(255),
+      expires_at DATETIME,
+      created_by VARCHAR(36),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS report_dispatches (
+      id VARCHAR(36) PRIMARY KEY,
+      report_id VARCHAR(36) NOT NULL,
+      organization_id VARCHAR(36) NOT NULL,
+      assigned_by VARCHAR(36) NOT NULL,
+      note LONGTEXT,
+      status VARCHAR(50) DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+      FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+      FOREIGN KEY (assigned_by) REFERENCES users(id),
+      KEY idx_dispatch_report (report_id),
+      KEY idx_dispatch_org (organization_id),
+      KEY idx_dispatch_status (status)
+    );
+
+    CREATE TABLE IF NOT EXISTS private_messages (
+      id VARCHAR(36) PRIMARY KEY,
+      dispatch_id VARCHAR(36) NOT NULL,
+      report_id VARCHAR(36) NOT NULL,
+      sender_id VARCHAR(36) NOT NULL,
+      receiver_user_id VARCHAR(36),
+      receiver_org_id VARCHAR(36),
+      body LONGTEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (dispatch_id) REFERENCES report_dispatches(id) ON DELETE CASCADE,
+      FOREIGN KEY (report_id) REFERENCES reports(id) ON DELETE CASCADE,
+      FOREIGN KEY (sender_id) REFERENCES users(id),
+      FOREIGN KEY (receiver_user_id) REFERENCES users(id),
+      FOREIGN KEY (receiver_org_id) REFERENCES organizations(id),
+      KEY idx_msg_dispatch (dispatch_id),
+      KEY idx_msg_sender (sender_id),
+      KEY idx_msg_receiver_org (receiver_org_id)
+    );
+
     CREATE TABLE IF NOT EXISTS emergency_contacts (
       id VARCHAR(36) PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
