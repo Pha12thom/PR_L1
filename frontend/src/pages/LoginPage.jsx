@@ -1,14 +1,40 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ email: '', password: '' });
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+
+  const inviteCredentials = useMemo(() => {
+    const email = searchParams.get('email') || '';
+    const password = searchParams.get('password') || '';
+    const auto = searchParams.get('autologin') === '1';
+    return { email, password, auto };
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!inviteCredentials.email && !inviteCredentials.password) return;
+    setForm({ email: inviteCredentials.email, password: inviteCredentials.password });
+  }, [inviteCredentials.email, inviteCredentials.password]);
+
+  useEffect(() => {
+    const autoSignIn = async () => {
+      if (!inviteCredentials.auto || !inviteCredentials.email || !inviteCredentials.password) return;
+      try {
+        await login(inviteCredentials.email, inviteCredentials.password, true);
+        navigate('/messages');
+      } catch (err) {
+        setError(err.response?.data?.message || 'Auto login failed. Please sign in manually.');
+      }
+    };
+    autoSignIn();
+  }, [inviteCredentials, login, navigate]);
 
   const onSubmit = async (e) => {
     e.preventDefault();

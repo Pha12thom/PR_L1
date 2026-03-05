@@ -15,7 +15,16 @@ const authRequired = async (req, res, next) => {
     const decoded = jwt.verify(token, jwtSecret);
     const user = await store.getUserById(decoded.id);
     if (!user) return res.status(401).json({ message: 'Invalid token' });
-    req.user = { id: user.id, role: user.role, email: user.email, name: user.name };
+    req.user = {
+      id: user.id,
+      role: user.role,
+      email: user.email,
+      name: user.name,
+      phone: user.phone || '',
+      avatarUrl: user.avatar_url || null,
+      organizationId: user.organization_id || null,
+      organizationName: user.organization_name || null,
+    };
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Token verification failed' });
@@ -35,7 +44,18 @@ const allowAnonymousAuth = async (req, _res, next) => {
   try {
     const decoded = jwt.verify(token, jwtSecret);
     const user = await store.getUserById(decoded.id);
-    req.user = user ? { id: user.id, role: user.role, email: user.email, name: user.name } : null;
+    req.user = user
+      ? {
+        id: user.id,
+        role: user.role,
+        email: user.email,
+        name: user.name,
+        phone: user.phone || '',
+        avatarUrl: user.avatar_url || null,
+        organizationId: user.organization_id || null,
+        organizationName: user.organization_name || null,
+      }
+      : null;
     next();
   } catch {
     req.user = null;

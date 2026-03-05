@@ -42,7 +42,12 @@ const InvitePage = () => {
             <p><strong>Temporary Password:</strong> {invite.password}</p>
             <p><strong>Expires:</strong> {new Date(invite.expiresAt).toLocaleString()}</p>
             <p className="success">Use these details to log in and access assigned emergency cases.</p>
-            <Link to="/login" className="btn">Proceed to Login</Link>
+            <Link
+              to={`/login?email=${encodeURIComponent(invite.email)}&password=${encodeURIComponent(invite.password)}&autologin=1`}
+              className="btn"
+            >
+              Proceed to Login
+            </Link>
           </div>
         )}
       </div>

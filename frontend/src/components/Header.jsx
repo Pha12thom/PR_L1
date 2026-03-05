@@ -29,6 +29,7 @@ const Header = () => {
   }, [location.pathname]);
 
   const navClass = ({ isActive }) => `sidebar-link${isActive ? ' active' : ''}`;
+  const initials = (user?.name || '?').trim().charAt(0).toUpperCase();
 
   return (
     <>
@@ -42,6 +43,19 @@ const Header = () => {
             ResQ Kenya
           </Link>
           <p className="sidebar-subtitle">Digital Emergency Hub</p>
+          {user && (
+            <div className="sidebar-profile-chip">
+              {user.avatarUrl ? (
+                <img src={user.avatarUrl} alt="profile" className="sidebar-avatar" />
+              ) : (
+                <div className="sidebar-avatar sidebar-avatar-fallback">{initials}</div>
+              )}
+              <div>
+                <strong>{user.name}</strong>
+                <small>{user.role === 'admin' ? 'Administrator' : user.organizationName || 'User'}</small>
+              </div>
+            </div>
+          )}
         </div>
 
         <nav className="sidebar-nav">
@@ -53,6 +67,7 @@ const Header = () => {
           <NavLink to="/contacts" className={navClass}>Emergency Contacts</NavLink>
           {user ? (
             <>
+              <NavLink to="/profile" className={navClass}>👤 Profile</NavLink>
               <NavLink to="/dashboard" className={navClass}>Report</NavLink>
               <NavLink to="/messages" className={navClass}>💬 Messages</NavLink>
               {user.role === 'admin' && <NavLink to="/admin" className={navClass}>⚙️ Admin</NavLink>}

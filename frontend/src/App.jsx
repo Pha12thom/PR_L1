@@ -14,6 +14,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import AdminLogsPage from './pages/AdminLogsPage';
 import MessagesPage from './pages/MessagesPage';
 import InvitePage from './pages/InvitePage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
@@ -43,6 +44,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MessagesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
                 </ProtectedRoute>
               }
             />

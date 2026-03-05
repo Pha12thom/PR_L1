@@ -7,8 +7,8 @@ const store = {
     const conn = await pool.getConnection();
     try {
       await conn.query(
-        'INSERT INTO users (id, name, email, phone, role, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
-        [id, user.name, user.email, user.phone || '', user.role || 'user', user.passwordHash]
+        'INSERT INTO users (id, name, email, phone, avatar_url, role, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [id, user.name, user.email, user.phone || '', user.avatarUrl || null, user.role || 'user', user.passwordHash]
       );
       return { id, ...user };
     } finally {
@@ -30,7 +30,7 @@ const store = {
     const conn = await pool.getConnection();
     try {
       const [rows] = await conn.query(
-        `SELECT u.id, u.name, u.email, u.role, u.phone, o.id AS organization_id, o.name AS organization_name
+        `SELECT u.id, u.name, u.email, u.role, u.phone, u.avatar_url, o.id AS organization_id, o.name AS organization_name
          FROM users u
          LEFT JOIN organization_memberships om ON om.user_id = u.id
          LEFT JOIN organizations o ON o.id = om.organization_id
@@ -47,8 +47,53 @@ const store = {
   async getAllUsers() {
     const conn = await pool.getConnection();
     try {
-      const [rows] = await conn.query('SELECT id, name, email, role, phone, created_at FROM users');
+      const [rows] = await conn.query('SELECT id, name, email, role, phone, avatar_url, created_at FROM users');
       return rows;
+    } finally {
+      conn.release();
+    }
+  },
+
+  async updateUserProfile(userId, updates = {}) {
+    const conn = await pool.getConnection();
+    try {
+      const fields = [];
+      const values = [];
+
+      if (updates.name !== undefined) {
+        fields.push('name = ?');
+        values.push(updates.name);
+      }
+      if (updates.email !== undefined) {
+        fields.push('email = ?');
+        values.push(updates.email);
+      }
+      if (updates.phone !== undefined) {
+        fields.push('phone = ?');
+        values.push(updates.phone);
+      }
+      if (updates.avatarUrl !== undefined) {
+        fields.push('avatar_url = ?');
+        values.push(updates.avatarUrl || null);
+      }
+
+      if (!fields.length) {
+        return this.getUserById(userId);
+      }
+
+      values.push(userId);
+      await conn.query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
+      return this.getUserById(userId);
+    } finally {
+      conn.release();
+    }
+  },
+
+  async updateUserPasswordHash(userId, passwordHash) {
+    const conn = await pool.getConnection();
+    try {
+      await conn.query('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, userId]);
+      return { success: true };
     } finally {
       conn.release();
     }

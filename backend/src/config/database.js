@@ -32,6 +32,7 @@ const initDatabase = async () => {
       name VARCHAR(255) NOT NULL,
       email VARCHAR(255) UNIQUE NOT NULL,
       phone VARCHAR(20),
+      avatar_url VARCHAR(500),
       role ENUM('user', 'admin') DEFAULT 'user',
       password_hash VARCHAR(255) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -207,6 +208,12 @@ const initDatabase = async () => {
         await conn.query(stmt);
       }
     }
+
+    const [avatarColumn] = await conn.query("SHOW COLUMNS FROM users LIKE 'avatar_url'");
+    if (!avatarColumn || avatarColumn.length === 0) {
+      await conn.query('ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)');
+    }
+
     console.log('Database schema initialized');
   } finally {
     conn.release();
