@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const swaggerUi = require('swagger-ui-express');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
@@ -17,6 +18,7 @@ const adminRoutes = require('./routes/admin.routes');
 const socialRoutes = require('./routes/social.routes');
 const contactsRoutes = require('./routes/contacts.routes');
 const messagesRoutes = require('./routes/messages.routes');
+const { openApiSpec } = require('./docs/openapi');
 
 const app = express();
 
@@ -42,6 +44,11 @@ const init = async () => {
     app.get('/api/health', (_req, res) => {
       res.json({ status: 'ok', service: 'Emergency Response API' });
     });
+
+    app.get('/api/openapi.json', (_req, res) => {
+      res.json(openApiSpec);
+    });
+    app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 
     app.use('/api/auth', authRoutes);
     app.use('/api/reports', reportsRoutes);

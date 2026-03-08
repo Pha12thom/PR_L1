@@ -10,13 +10,28 @@ const router = express.Router();
 router.post(
   '/register',
   [
-    body('name').trim().notEmpty(),
-    body('email').isEmail(),
-    body('password').isLength({ min: 6 }),
+    body('name').trim().notEmpty().withMessage('Full name is required').isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
+    body('email').isEmail().withMessage('Please enter a valid email address'),
+    body('password')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters')
+      .matches(/[a-z]/)
+      .withMessage('Password must include a lowercase letter')
+      .matches(/[A-Z]/)
+      .withMessage('Password must include an uppercase letter')
+      .matches(/\d/)
+      .withMessage('Password must include a number')
+      .matches(/[^A-Za-z0-9]/)
+      .withMessage('Password must include a special character'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        message: 'Please fix the highlighted registration requirements',
+        errors: errors.array().map((item) => ({ field: item.path, message: item.msg })),
+      });
+    }
 
     const { name, email, password, phone } = req.body;
 
@@ -163,8 +178,16 @@ router.put('/change-password', authRequired, async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ message: 'Current password and new password are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ message: 'New password must be at least 6 characters' });
+    const strongPassword =
+      newPassword.length >= 8
+      && /[a-z]/.test(newPassword)
+      && /[A-Z]/.test(newPassword)
+      && /\d/.test(newPassword)
+      && /[^A-Za-z0-9]/.test(newPassword);
+    if (!strongPassword) {
+      return res.status(400).json({
+        message: 'New password must be 8+ chars and include uppercase, lowercase, number, and special character',
+      });
     }
 
     const user = await store.getUserByEmail(req.user.email);
