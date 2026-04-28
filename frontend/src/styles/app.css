@@ -654,6 +654,30 @@ body {
   text-decoration: underline;
 }
 
+.register-validation-list,
+.register-password-checklist {
+  margin: 4px 0 2px;
+  padding-left: 18px;
+  font-size: 0.86rem;
+}
+
+.register-validation-list {
+  color: #b3261e;
+}
+
+.register-password-checklist {
+  color: #55617e;
+}
+
+.register-password-checklist li {
+  margin-bottom: 2px;
+}
+
+.register-password-checklist li.ok {
+  color: #13795b;
+  font-weight: 600;
+}
+
 .auth-check {
   margin-top: -2px;
   font-size: 0.9rem;

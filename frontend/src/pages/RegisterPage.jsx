@@ -8,15 +8,37 @@ const RegisterPage = () => {
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState([]);
+
+  const passwordChecks = {
+    length: form.password.length >= 8,
+    lowercase: /[a-z]/.test(form.password),
+    uppercase: /[A-Z]/.test(form.password),
+    number: /\d/.test(form.password),
+    special: /[^A-Za-z0-9]/.test(form.password),
+  };
+
+  const isPasswordStrong = Object.values(passwordChecks).every(Boolean);
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setValidationErrors([]);
+
+    if (!isPasswordStrong) {
+      setError('Please meet all password requirements before creating your account.');
+      return;
+    }
+
     try {
       await register(form);
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const apiError = err.response?.data;
+      if (Array.isArray(apiError?.errors) && apiError.errors.length > 0) {
+        setValidationErrors(apiError.errors.map((item) => item.message || item.msg).filter(Boolean));
+      }
+      setError(apiError?.message || 'Registration failed. Please verify your details and try again.');
     }
   };
 
@@ -31,6 +53,13 @@ const RegisterPage = () => {
           <p className="auth-subtitle">Join the platform and start reporting emergencies quickly.</p>
         </div>
         {error && <p className="error">{error}</p>}
+        {validationErrors.length > 0 && (
+          <ul className="register-validation-list">
+            {validationErrors.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        )}
         <input
           placeholder="Name"
           name="name"
@@ -74,6 +103,15 @@ const RegisterPage = () => {
             {showPassword ? '🙈' : '👁️'}
           </button>
         </div>
+
+        <ul className="register-password-checklist">
+          <li className={passwordChecks.length ? 'ok' : ''}>At least 8 characters</li>
+          <li className={passwordChecks.lowercase ? 'ok' : ''}>Contains a lowercase letter</li>
+          <li className={passwordChecks.uppercase ? 'ok' : ''}>Contains an uppercase letter</li>
+          <li className={passwordChecks.number ? 'ok' : ''}>Contains a number</li>
+          <li className={passwordChecks.special ? 'ok' : ''}>Contains a special character</li>
+        </ul>
+
         <button className="btn" type="submit">
           Register
         </button>
