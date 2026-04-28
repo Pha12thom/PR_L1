@@ -8,6 +8,13 @@ const Header = () => {
   const { user, logout } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem('sidebar-collapsed') === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
   const location = useLocation();
 
   useEffect(() => {
@@ -37,11 +44,28 @@ const Header = () => {
         ☰ Menu
       </button>
 
-      <header className={`sidebar ${menuOpen ? 'open' : ''}`}>
+      <header className={`sidebar ${menuOpen ? 'open' : ''} ${collapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-top">
           <Link to="/" className="brand sidebar-brand">
-            ResQ Kenya
+            <span className="brand-short">R</span>
+            <span className="brand-full label">ResQ Kenya</span>
           </Link>
+          <button
+            type="button"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="sidebar-collapse-toggle"
+            onClick={() => {
+              setCollapsed((p) => {
+                const next = !p;
+                try {
+                  localStorage.setItem('sidebar-collapsed', String(next));
+                } catch (e) {}
+                return next;
+              });
+            }}
+          >
+            {collapsed ? '»' : '«'}
+          </button>
           <p className="sidebar-subtitle">Digital Emergency Hub</p>
           {user && (
             <div className="sidebar-profile-chip">
@@ -59,27 +83,63 @@ const Header = () => {
         </div>
 
         <nav className="sidebar-nav">
-          <NavLink to="/reports" className={navClass}>Nearby Incidents</NavLink>
-          <NavLink to="/notifications" className={navClass}>
-            <span className="nav-notify-link">Notifications {unreadCount > 0 && <span className="nav-notify-badge">{unreadCount}</span>}</span>
+          <NavLink to="/reports" className={navClass}>
+            <span className="icon">📍</span>
+            <span className="label">Nearby Incidents</span>
           </NavLink>
-          <NavLink to="/social" className={navClass}>Community</NavLink>
-          <NavLink to="/contacts" className={navClass}>Emergency Contacts</NavLink>
+          <NavLink to="/notifications" className={navClass}>
+            <span className="icon">🔔</span>
+            <span className="label nav-notify-link">Notifications {unreadCount > 0 && <span className="nav-notify-badge">{unreadCount}</span>}</span>
+          </NavLink>
+          <NavLink to="/social" className={navClass}>
+            <span className="icon">👥</span>
+            <span className="label">Community</span>
+          </NavLink>
+          <NavLink to="/contacts" className={navClass}>
+            <span className="icon">📞</span>
+            <span className="label">Emergency Contacts</span>
+          </NavLink>
           {user ? (
             <>
-              <NavLink to="/profile" className={navClass}>👤 Profile</NavLink>
-              <NavLink to="/dashboard" className={navClass}>Report</NavLink>
-              <NavLink to="/messages" className={navClass}>💬 Messages</NavLink>
-              {user.role === 'admin' && <NavLink to="/admin" className={navClass}>⚙️ Admin</NavLink>}
-              {user.role === 'admin' && <NavLink to="/admin/logs" className={navClass}>📜 Site Logs</NavLink>}
+              <NavLink to="/profile" className={navClass}>
+                <span className="icon">👤</span>
+                <span className="label">Profile</span>
+              </NavLink>
+              <NavLink to="/dashboard" className={navClass}>
+                <span className="icon">⚠️</span>
+                <span className="label">Report</span>
+              </NavLink>
+              <NavLink to="/messages" className={navClass}>
+                <span className="icon">💬</span>
+                <span className="label">Messages</span>
+              </NavLink>
+              {user.role === 'admin' && (
+                <NavLink to="/admin" className={navClass}>
+                  <span className="icon">⚙️</span>
+                  <span className="label">Admin</span>
+                </NavLink>
+              )}
+              {user.role === 'admin' && (
+                <NavLink to="/admin/logs" className={navClass}>
+                  <span className="icon">📜</span>
+                  <span className="label">Site Logs</span>
+                </NavLink>
+              )}
               <button type="button" onClick={logout} className="btn-link sidebar-logout">
-                Logout
+                <span className="icon">↩️</span>
+                <span className="label">Logout</span>
               </button>
             </>
           ) : (
             <>
-              <NavLink to="/login" className={navClass}>Login</NavLink>
-              <NavLink to="/register" className={navClass}>Sign Up</NavLink>
+              <NavLink to="/login" className={navClass}>
+                <span className="icon">🔐</span>
+                <span className="label">Login</span>
+              </NavLink>
+              <NavLink to="/register" className={navClass}>
+                <span className="icon">📝</span>
+                <span className="label">Sign Up</span>
+              </NavLink>
             </>
           )}
         </nav>

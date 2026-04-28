@@ -48,7 +48,19 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="container section narrow auth-page-wrap">
+    <div className="container section auth-page-wrap auth-layout">
+      <section className="auth-side-panel card">
+        <div className="auth-side-badge">WordPress-style layout</div>
+        <h2>Welcome Back</h2>
+        <p>Access your emergency dashboard, track incident status, and stay connected with your community.</p>
+        <ul className="auth-side-list">
+          <li>Real-time emergency reporting</li>
+          <li>Nearby incidents and notifications</li>
+          <li>Secure account and fast updates</li>
+        </ul>
+        <p className="auth-side-switch">New here? <Link to="/register">Create an account</Link></p>
+      </section>
+
       <form className="card form auth-card" onSubmit={onSubmit} autoComplete="on">
         <div className="auth-top">
           <div className="auth-flag" aria-label="Kenya flag">

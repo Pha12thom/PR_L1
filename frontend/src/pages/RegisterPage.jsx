@@ -43,7 +43,19 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="container section narrow auth-page-wrap">
+    <div className="container section auth-page-wrap auth-layout">
+      <section className="auth-side-panel card">
+        <div className="auth-side-badge">WordPress-style layout</div>
+        <h2>Create Your Account</h2>
+        <p>Join the platform to report emergencies, upload evidence, and help local responders act quickly.</p>
+        <ul className="auth-side-list">
+          <li>Simple onboarding experience</li>
+          <li>Secure access to your dashboard</li>
+          <li>Direct links to community safety tools</li>
+        </ul>
+        <p className="auth-side-switch">Already registered? <Link to="/login">Sign in now</Link></p>
+      </section>
+
       <form className="card form auth-card" onSubmit={onSubmit} autoComplete="on">
         <div className="auth-top">
           <div className="auth-flag" aria-label="Kenya flag">

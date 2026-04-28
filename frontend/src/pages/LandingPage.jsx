@@ -36,6 +36,30 @@ const LandingPage = () => {
         </div>
       </section>
 
+      <section className="landing-auth-overview card">
+        <div className="home-gallery-head">
+          <h3>Quick Access</h3>
+          <p>Browse the home experience, sign in, or create an account from one clear side-by-side view.</p>
+        </div>
+        <div className="landing-three-panel">
+          <article className="landing-panel-card">
+            <h4>Home</h4>
+            <p>Explore real-time emergency updates and community incidents across your area.</p>
+            <Link to="/reports" className="btn btn-outline">View Incidents</Link>
+          </article>
+          <article className="landing-panel-card">
+            <h4>Login</h4>
+            <p>Sign in to report emergencies, track updates, and receive official admin responses.</p>
+            <Link to="/login" className="btn">Sign In</Link>
+          </article>
+          <article className="landing-panel-card">
+            <h4>Sign Up</h4>
+            <p>Create a new account to start reporting incidents and supporting your community.</p>
+            <Link to="/register" className="btn">Create Account</Link>
+          </article>
+        </div>
+      </section>
+
       <section className="home-gallery card">
         <div className="home-gallery-head">
           <h3>Emergency Services </h3>
